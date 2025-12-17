@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  backend-test:
+    container_name: spotify-uploader-backend-test
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      - NODE_ENV=test
+      - SPOTIFY_CLIENT_ID=test_client_id
+      - SPOTIFY_CLIENT_SECRET=test_client_secret
+      - SPOTIFY_REDIRECT_URI=http://localhost:3000/auth/callback
+      - SESSION_SECRET=test_session_secret
+      - MONGO_URI=mongodb://localhost:27017/test
+    command: sh -c "npm install && npm test"
+    networks:
+      - test-network
+
+  backend-test-coverage:
+    container_name: spotify-uploader-backend-test-coverage
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      - NODE_ENV=test
+      - SPOTIFY_CLIENT_ID=test_client_id
+      - SPOTIFY_CLIENT_SECRET=test_client_secret
+      - SPOTIFY_REDIRECT_URI=http://localhost:3000/auth/callback
+      - SESSION_SECRET=test_session_secret
+      - MONGO_URI=mongodb://localhost:27017/test
+    command: sh -c "npm install && npm run test:coverage"
+    networks:
+      - test-network
+
+  frontend-test:
+    container_name: spotify-uploader-frontend-test
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    environment:
+      - NODE_ENV=test
+      - VITE_API_URL=http://localhost:3000
+    command: sh -c "npm install && npm test"
+    networks:
+      - test-network
+
+  frontend-test-coverage:
+    container_name: spotify-uploader-frontend-test-coverage
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    environment:
+      - NODE_ENV=test
+      - VITE_API_URL=http://localhost:3000
+    command: sh -c "npm install && npm run test:coverage"
+    networks:
+      - test-network
+
+  # Run all tests in parallel
+  all-tests:
+    container_name: spotify-uploader-all-tests
+    image: docker/compose:alpine-1.29.2
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: sh -c "
+      echo '🧪 Running Backend Tests...' &&
+      docker-compose -f docker-compose.test.yml run --rm backend-test &&
+      echo '✅ Backend tests passed!' &&
+      echo '' &&
+      echo '🧪 Running Frontend Tests...' &&
+      docker-compose -f docker-compose.test.yml run --rm frontend-test &&
+      echo '✅ Frontend tests passed!' &&
+      echo '' &&
+      echo '🎉 All tests passed!'
+      "
+    networks:
+      - test-network
+    profiles:
+      - all
+
+networks:
+  test-network:
+    driver: bridge

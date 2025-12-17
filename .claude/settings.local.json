@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose build:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker-compose:*)",
+      "Bash(./run-tests.sh:*)",
+      "Bash(chmod:*)",
+      "Bash(./backup.sh:*)",
+      "WebFetch(domain:www.oracle.com)",
+      "WebSearch",
+      "Bash(cat:*)",
+      "Bash(tree:*)",
+      "Bash(npm run build)",
+      "Bash(npx tsc:*)",
+      "Bash(npx --package=typescript tsc:*)",
+      "Bash(npm install)",
+      "Bash(docker build:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(echo:*)",
+      "Bash(npm install:*)",
+      "Bash(npm search:*)",
+      "Bash(find:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

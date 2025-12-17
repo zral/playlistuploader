@@ -1,0 +1,145 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: spotify-uploader-mongodb-prod
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: spotify-uploader
+    volumes:
+      - mongodb_data_prod:/data/db
+    networks:
+      - spotify-network-prod
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/spotify-uploader --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Don't expose MongoDB port in production for security
+
+  redis:
+    image: redis:7-alpine
+    container_name: spotify-uploader-redis-prod
+    restart: always
+    networks:
+      - spotify-network-prod
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    # Don't expose Redis port in production for security
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: spotify-uploader-backend-prod
+    restart: always
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGO_URI=mongodb://mongodb:27017/spotify-uploader
+      - SESSION_SECRET=${SESSION_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://127.0.0.1}
+      - FRONTEND_URL=${FRONTEND_URL:-http://127.0.0.1}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI:-http://127.0.0.1:3000/auth/callback}
+      - REDIS_URL=redis://redis:6379
+      - CACHE_ENABLED=${CACHE_ENABLED:-true}
+      - AI_PROVIDER=${AI_PROVIDER:-openrouter}
+      - AI_FALLBACK_PROVIDER=${AI_FALLBACK_PROVIDER}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-openai/gpt-3.5-turbo}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-llama3-70b-8192}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AI_RATE_LIMIT_PER_USER_DAILY=${AI_RATE_LIMIT_PER_USER_DAILY:-5}
+      - AI_RATE_LIMIT_PER_IP_HOURLY=${AI_RATE_LIMIT_PER_IP_HOURLY:-10}
+      - AI_MAX_SONGS_PER_REQUEST=${AI_MAX_SONGS_PER_REQUEST:-50}
+      - AI_MAX_DURATION_MINUTES=${AI_MAX_DURATION_MINUTES:-180}
+    ports:
+      - "3000:3000"
+    networks:
+      - spotify-network-prod
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    # Backend port exposed for OAuth callback (Spotify requires explicit port for HTTP URIs)
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: spotify-uploader-frontend-prod
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "${PORT:-80}:80"
+    networks:
+      - spotify-network-prod
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+  mongodb-backup:
+    image: mongo:7
+    container_name: spotify-uploader-backup-prod
+    restart: always
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - spotify-network-prod
+    volumes:
+      - ./backups:/backups
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/spotify-uploader
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+    command: >
+      bash -c "
+      echo '🎄 MongoDB Backup Service Started';
+      echo 'Database: spotify-uploader';
+      echo 'Backup Interval: Daily (every 24 hours)';
+      echo 'Retention: $${BACKUP_RETENTION_DAYS} days';
+      echo 'Backup Location: /backups';
+      echo '';
+      while true; do
+        TIMESTAMP=$$(date +%Y%m%d-%H%M%S);
+        BACKUP_DIR=\"/backups/backup-$${TIMESTAMP}\";
+        echo \"[$$(date +'%Y-%m-%d %H:%M:%S')] Starting backup...\";
+        if mongodump --uri=\"$${MONGO_URI}\" --out=\"$${BACKUP_DIR}\" --quiet; then
+          BACKUP_SIZE=$$(du -sh \"$${BACKUP_DIR}\" | cut -f1);
+          echo \"[$$(date +'%Y-%m-%d %H:%M:%S')] ✅ Backup completed: $${BACKUP_DIR} ($${BACKUP_SIZE})\";
+        else
+          echo \"[$$(date +'%Y-%m-%d %H:%M:%S')] ❌ Backup failed\";
+        fi;
+        echo \"[$$(date +'%Y-%m-%d %H:%M:%S')] Cleaning up old backups (older than $${BACKUP_RETENTION_DAYS} days)...\";
+        find /backups -maxdepth 1 -type d -name 'backup-*' -mtime +$${BACKUP_RETENTION_DAYS} -exec rm -rf {} + 2>/dev/null || true;
+        REMAINING=$$(find /backups -maxdepth 1 -type d -name 'backup-*' | wc -l);
+        echo \"[$$(date +'%Y-%m-%d %H:%M:%S')] Backups remaining: $${REMAINING}\";
+        echo \"[$$(date +'%Y-%m-%d %H:%M:%S')] Next backup in 24 hours...\";
+        echo '';
+        sleep 86400;
+      done
+      "
+
+networks:
+  spotify-network-prod:
+    driver: bridge
+
+volumes:
+  mongodb_data_prod:

@@ -1,0 +1,100 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: spotify-uploader-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: spotify-uploader
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - spotify-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/spotify-uploader --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: spotify-uploader-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - spotify-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: spotify-uploader-backend
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGO_URI=mongodb://mongodb:27017/spotify-uploader
+      - SESSION_SECRET=dev-secret-change-in-production
+      - CORS_ORIGIN=http://127.0.0.1:5173
+      - FRONTEND_URL=http://127.0.0.1:5173
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-your_client_id_here}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-your_client_secret_here}
+      - SPOTIFY_REDIRECT_URI=http://127.0.0.1:3000/auth/callback
+      - REDIS_URL=redis://redis:6379
+      - AI_PROVIDER=${AI_PROVIDER:-openrouter}
+      - AI_FALLBACK_PROVIDER=${AI_FALLBACK_PROVIDER}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-openai/gpt-3.5-turbo}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-llama3-70b-8192}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AI_RATE_LIMIT_PER_USER_DAILY=${AI_RATE_LIMIT_PER_USER_DAILY:-5}
+      - AI_RATE_LIMIT_PER_IP_HOURLY=${AI_RATE_LIMIT_PER_IP_HOURLY:-10}
+      - AI_MAX_SONGS_PER_REQUEST=${AI_MAX_SONGS_PER_REQUEST:-50}
+      - AI_MAX_DURATION_MINUTES=${AI_MAX_DURATION_MINUTES:-180}
+    ports:
+      - "3000:3000"
+    networks:
+      - spotify-network
+    volumes:
+      - ./backend/src:/app/src
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: spotify-uploader-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "5173:5173"
+    networks:
+      - spotify-network
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.js:/app/vite.config.js
+
+networks:
+  spotify-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
