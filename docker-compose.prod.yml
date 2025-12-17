@@ -85,7 +85,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "${PORT:-80}:80"
+      - "8080:80"
     networks:
       - spotify-network-prod
     healthcheck:
@@ -94,6 +94,7 @@ services:
       timeout: 3s
       start_period: 5s
       retries: 3
+    # Frontend exposed on port 8080 for Nginx reverse proxy (host Nginx listens on 80/443)
 
   mongodb-backup:
     image: mongo:7
