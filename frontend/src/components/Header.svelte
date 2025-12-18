@@ -16,7 +16,7 @@
 <header>
   <div class="header-content">
     <div class="title-section">
-      <h1>🎵 Listify</h1>
+      <h1>🎵 Listify - Your vibe, your way</h1>
       <div class="christmas-lights">
         <div class="light"></div>
         <div class="light"></div>
