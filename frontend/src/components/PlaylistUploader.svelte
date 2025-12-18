@@ -315,7 +315,7 @@
         // Create new playlist
         const data = await playlists.create(
           newPlaylistName.trim(),
-          `Created with Spotify Playlist Uploader on ${new Date().toLocaleDateString()}`
+          `Created by Listify on ${new Date().toLocaleDateString()}`
         );
         playlistId = data.playlist.id;
         playlistNameForMessage = newPlaylistName;
@@ -362,7 +362,7 @@
       if (!selectedPlaylist && newPlaylistName.trim()) {
         const data = await playlists.create(
           newPlaylistName.trim(),
-          `Created with Christmas Playlist Uploader on ${new Date().toLocaleDateString()}`
+          `Created by Listify on ${new Date().toLocaleDateString()}`
         );
         playlistId = data.playlist.id;
       }

@@ -1,6 +1,6 @@
-# 🎄 Christmas Spotify Playlist Uploader
+# 🎵 Listify
 
-A festive web application that converts text-based playlists into Spotify playlists with a beautiful Christmas theme! Simply paste your song list, and the app will search Spotify, match the songs, and add them to your playlist.
+A modern web application that converts text-based playlists into Spotify playlists with AI-powered playlist generation! Simply paste your song list, and the app will search Spotify, match the songs, and add them to your playlist.
 
 ![Christmas Theme](https://img.shields.io/badge/Theme-Christmas-red?style=for-the-badge)
 ![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
@@ -69,7 +69,7 @@ A festive web application that converts text-based playlists into Spotify playli
 2. Log in with your Spotify account
 3. Click "Create App"
 4. Fill in the details:
-   - **App Name**: Christmas Playlist Uploader
+   - **App Name**: Listify
    - **App Description**: Upload text playlists to Spotify
    - **Redirect URI**: `http://127.0.0.1:80/auth/callback`
 5. Accept the terms and click "Create"

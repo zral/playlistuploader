@@ -27,7 +27,7 @@
 <div class="login-container">
   <div class="card login-card">
     <div class="christmas-icon">🎅</div>
-    <h2>Welcome to Christmas Playlist Uploader!</h2>
+    <h2>Welcome to Listify!</h2>
     <p class="description">
       Transform your text-based playlists into Spotify magic this holiday season.
       Simply paste your song list, and we'll find and add the best matches to your Spotify playlist!

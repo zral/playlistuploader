@@ -71,7 +71,7 @@ async function callOpenRouter(messages: AIMessage[], model?: string): Promise<st
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost',
-          'X-Title': 'Christmas Spotify Playlist Uploader'
+          'X-Title': 'Listify'
         },
         timeout: 30000
       }

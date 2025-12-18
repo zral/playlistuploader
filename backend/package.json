@@ -1,7 +1,7 @@
 {
   "name": "spotify-uploader-backend",
   "version": "1.0.0",
-  "description": "Backend API for Spotify Playlist Uploader",
+  "description": "Backend API for Listify",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {

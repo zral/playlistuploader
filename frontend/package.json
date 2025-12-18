@@ -1,7 +1,7 @@
 {
   "name": "spotify-uploader-frontend",
   "version": "1.0.0",
-  "description": "Christmas-themed Spotify Playlist Uploader Frontend",
+  "description": "Listify - Your Playlist Creator Frontend",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",

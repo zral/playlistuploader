@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Christmas Spotify Playlist Uploader** - Full-stack web application that converts text-based playlists into Spotify playlists with intelligent song matching and confidence scoring.
+**Listify** - Full-stack web application that converts text-based playlists into Spotify playlists with intelligent song matching, confidence scoring, and AI-powered playlist generation.
 
 - **Frontend**: Svelte 4 + Vite (dev: port 5173, prod: port 80)
 - **Backend**: Node.js 20 + Express.js (port 3000)

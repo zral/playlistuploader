@@ -14,7 +14,7 @@ describe('Header Component', () => {
 
   test('renders app title', () => {
     render(Header);
-    expect(screen.getByText(/spotify playlist uploader/i)).toBeInTheDocument();
+    expect(screen.getByText(/listify/i)).toBeInTheDocument();
   });
 
   test('displays Christmas tree emoji', () => {

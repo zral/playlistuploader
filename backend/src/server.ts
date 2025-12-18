@@ -36,7 +36,7 @@ app.get('/health', (_req: Request, res: Response): void => {
 // Root endpoint
 app.get('/', (_req: Request, res: Response): void => {
   res.json({
-    message: '🎄 Christmas Spotify Playlist Uploader API',
+    message: '🎵 Listify API',
     version: '1.0.0',
     endpoints: {
       health: '/health',
