@@ -187,14 +187,39 @@ async function callOpenAI(messages: AIMessage[], model?: string): Promise<string
   return content;
 }
 
+export interface ParsedPlaylist {
+  playlistName: string;
+  playlist: string;
+}
+
 /**
  * Parse and validate AI response
  */
-function parsePlaylistResponse(content: string): string {
-  // Remove any numbering, bullets, or extra formatting
-  const lines = content
-    .split('\n')
-    .map(line => line.trim())
+function parsePlaylistResponse(content: string): ParsedPlaylist {
+  const allLines = content.split('\n').map(line => line.trim());
+
+  // Extract playlist name (first non-empty line)
+  let playlistName = 'My Playlist';
+  let songStartIndex = 0;
+
+  for (let i = 0; i < allLines.length; i++) {
+    const line = allLines[i];
+    if (line.length > 0) {
+      // First non-empty line is the playlist name (if it doesn't contain " - ")
+      if (!line.includes(' - ')) {
+        playlistName = line;
+        songStartIndex = i + 1;
+        break;
+      } else {
+        // First line is already a song, use default name
+        break;
+      }
+    }
+  }
+
+  // Parse songs (skip playlist name and any blank lines)
+  const lines = allLines
+    .slice(songStartIndex)
     .filter(line => line.length > 0)
     .map(line => {
       // Remove numbering like "1. ", "1) ", "- ", "* "
@@ -212,21 +237,25 @@ function parsePlaylistResponse(content: string): string {
   }
 
   logger.info('Parsed AI playlist response', {
+    playlistName,
     totalSongs: lines.length,
     firstSong: lines[0],
     lastSong: lines[lines.length - 1]
   });
 
-  return lines.join('\n');
+  return {
+    playlistName,
+    playlist: lines.join('\n')
+  };
 }
 
 /**
  * Generate playlist using AI
  * @param {string} description - Playlist description
  * @param {object} options - { songCount?, durationMinutes? }
- * @returns {string} Playlist in "Artist - Title" format
+ * @returns {ParsedPlaylist} Object with playlistName and playlist
  */
-export async function generatePlaylist(description: string, options: PlaylistOptions = {}): Promise<string> {
+export async function generatePlaylist(description: string, options: PlaylistOptions = {}): Promise<ParsedPlaylist> {
   const { songCount, durationMinutes } = options;
 
   // Validation
@@ -304,15 +333,16 @@ export async function generatePlaylist(description: string, options: PlaylistOpt
   }
 
   // Parse and validate response
-  const playlist = parsePlaylistResponse(content);
+  const result = parsePlaylistResponse(content);
 
   logger.info('AI playlist generated successfully', {
     provider: usedProvider,
     description: description.substring(0, 50),
-    songCount: playlist.split('\n').length
+    playlistName: result.playlistName,
+    songCount: result.playlist.split('\n').length
   });
 
-  return playlist;
+  return result;
 }
 
 /**

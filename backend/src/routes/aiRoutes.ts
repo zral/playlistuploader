@@ -98,7 +98,7 @@ router.post(
 
       // Generate playlist
       const startTime = Date.now();
-      const playlist = await generatePlaylist(description, {
+      const result = await generatePlaylist(description, {
         songCount,
         durationMinutes
       });
@@ -107,14 +107,16 @@ router.post(
       logger.info('AI playlist generation completed', {
         userId: (req as any).userId,
         duration: `${duration}ms`,
-        songCount: playlist.split('\n').length
+        playlistName: result.playlistName,
+        songCount: result.playlist.split('\n').length
       });
 
       res.json({
         success: true,
-        playlist: playlist,
+        playlistName: result.playlistName,
+        playlist: result.playlist,
         metadata: {
-          songCount: playlist.split('\n').length,
+          songCount: result.playlist.split('\n').length,
           generationTime: duration
         }
       });

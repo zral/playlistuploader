@@ -181,6 +181,7 @@ describe('AIPlaylistGenerator Component', () => {
 
   test('calls onGenerate callback when generation succeeds', async () => {
     const mockGenerateResponse = {
+      playlistName: 'Chill Electronic Vibes',
       playlist: 'Artist 1 - Song 1\nArtist 2 - Song 2',
       metadata: {
         songCount: 2,
@@ -207,7 +208,7 @@ describe('AIPlaylistGenerator Component', () => {
     await fireEvent.click(button);
 
     await waitFor(() => {
-      expect(onGenerateMock).toHaveBeenCalledWith(mockGenerateResponse.playlist);
+      expect(onGenerateMock).toHaveBeenCalledWith(mockGenerateResponse.playlist, mockGenerateResponse.playlistName);
     });
 
     expect(notificationSpy).toHaveBeenCalledWith(
@@ -289,6 +290,7 @@ describe('AIPlaylistGenerator Component', () => {
 
   test('sends correct parameters for song count mode', async () => {
     const mockGenerateResponse = {
+      playlistName: 'Test Playlist',
       playlist: 'Artist 1 - Song 1',
       metadata: { songCount: 1, generationTime: 1000 }
     };
@@ -318,6 +320,7 @@ describe('AIPlaylistGenerator Component', () => {
 
   test('sends correct parameters for duration mode', async () => {
     const mockGenerateResponse = {
+      playlistName: 'Test Playlist',
       playlist: 'Artist 1 - Song 1',
       metadata: { songCount: 1, generationTime: 1000 }
     };

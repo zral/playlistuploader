@@ -84,6 +84,7 @@ export interface GeneratePlaylistRequest {
 
 export interface GeneratePlaylistResponse {
   success: boolean;
+  playlistName: string;
   playlist: string;
   metadata: {
     songCount: number;

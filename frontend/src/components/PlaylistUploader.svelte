@@ -417,8 +417,9 @@
     searchResults = [];
   }
 
-  function handleAIGenerate(generatedPlaylist: string): void {
+  function handleAIGenerate(generatedPlaylist: string, suggestedName: string): void {
     playlistText = generatedPlaylist;
+    newPlaylistName = suggestedName; // Use AI-suggested playlist name
     inputMode = 'text'; // Switch to text mode to show the generated playlist
 
     // Automatically search and show review pane

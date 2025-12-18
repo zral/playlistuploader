@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { ai } from '../lib/api';
 
-  export let onGenerate: (playlist: string) => void;
+  export let onGenerate: (playlist: string, playlistName: string) => void;
 
   const dispatch = createEventDispatcher<{
     notification: { message: string; type: 'success' | 'error' | 'info' };
@@ -45,8 +45,8 @@
         type: 'success'
       });
 
-      // Call parent callback with generated playlist
-      onGenerate(data.playlist);
+      // Call parent callback with generated playlist and name
+      onGenerate(data.playlist, data.playlistName);
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || error.message || 'Failed to generate playlist';
       dispatch('notification', {
