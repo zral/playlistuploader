@@ -16,7 +16,7 @@
 <header>
   <div class="header-content">
     <div class="title-section">
-      <h1>🎵 Listify - Your vibe, your way</h1>
+      <h1>🎵 Listify /h1>
       <div class="christmas-lights">
         <div class="light"></div>
         <div class="light"></div>
@@ -24,6 +24,7 @@
         <div class="light"></div>
         <div class="light"></div>
       </div>
+      <p class="subtitle"> Your vibe, your way</p>
     </div>
 
     {#if user}
