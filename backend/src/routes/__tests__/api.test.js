@@ -222,6 +222,91 @@ describe('API Routes', () => {
       expect(typeof response.body.results[0].bestMatch.confidence).toBe('number');
       expect(response.body.results[0].bestMatch.confidence).toBeGreaterThan(0);
     });
+
+    test('should filter out alternatives with same artist and same song name', async () => {
+      const mockTracks = [
+        {
+          id: 'track1',
+          uri: 'spotify:track:1',
+          name: 'Hello',
+          artists: [{ name: 'Adele' }],
+          album: {
+            name: '25',
+            images: [{ url: 'https://example.com/image.jpg' }],
+          },
+          popularity: 95,
+          preview_url: null,
+        },
+        {
+          id: 'track2',
+          uri: 'spotify:track:2',
+          name: 'Hello', // Same artist, same song - should be FILTERED OUT
+          artists: [{ name: 'Adele' }],
+          album: {
+            name: '25 (Deluxe)',
+            images: [{ url: 'https://example.com/image2.jpg' }],
+          },
+          popularity: 90,
+          preview_url: null,
+        },
+        {
+          id: 'track3',
+          uri: 'spotify:track:3',
+          name: 'Rolling in the Deep', // Same artist, different song - should be INCLUDED
+          artists: [{ name: 'Adele' }],
+          album: {
+            name: '21',
+            images: [{ url: 'https://example.com/image3.jpg' }],
+          },
+          popularity: 93,
+          preview_url: null,
+        },
+        {
+          id: 'track4',
+          uri: 'spotify:track:4',
+          name: 'Hello', // Different artist, same song - should be INCLUDED
+          artists: [{ name: 'Lionel Richie' }],
+          album: {
+            name: 'Can\'t Slow Down',
+            images: [{ url: 'https://example.com/image4.jpg' }],
+          },
+          popularity: 88,
+          preview_url: null,
+        },
+      ];
+
+      mockSearchTrack.mockResolvedValue(mockTracks);
+
+      const response = await request(app)
+        .post('/api/search/batch')
+        .set('Cookie', ['spotify_user_id=test_user_id'])
+        .send({
+          queries: ['Adele - Hello'],
+        })
+        .expect(200);
+
+      expect(response.body.results[0].alternatives).toBeInstanceOf(Array);
+      expect(response.body.results[0].alternatives.length).toBe(2);
+
+      // Should include "Rolling in the Deep" by Adele (same artist, different song)
+      const alternative1 = response.body.results[0].alternatives.find(
+        alt => alt.name === 'Rolling in the Deep'
+      );
+      expect(alternative1).toBeDefined();
+      expect(alternative1.artists).toContain('Adele');
+
+      // Should include "Hello" by Lionel Richie (different artist, same song)
+      const alternative2 = response.body.results[0].alternatives.find(
+        alt => alt.name === 'Hello' && alt.artists.includes('Lionel Richie')
+      );
+      expect(alternative2).toBeDefined();
+
+      // Should NOT include "Hello" by Adele again (same artist, same song)
+      const duplicateHello = response.body.results[0].alternatives.filter(
+        alt => alt.name === 'Hello' && alt.artists.includes('Adele')
+      );
+      expect(duplicateHello.length).toBe(0);
+    });
   });
 
   describe('GET /api/playlists', () => {

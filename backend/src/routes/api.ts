@@ -137,23 +137,46 @@ router.post('/search/batch', authenticateSpotify, async (req: Request, res: Resp
     const searchPromises = queries.map(async (query: string) => {
       try {
         const tracks = await searchTrack(authReq.accessToken, query);
+
+        // Filter alternatives: if same artist as best match, must have different song name
+        const bestMatch = tracks[0];
+        const filteredAlternatives = bestMatch
+          ? tracks.slice(1).filter((track) => {
+              const bestMatchArtists = bestMatch.artists.map(a => a.name.toLowerCase());
+              const trackArtists = track.artists.map(a => a.name.toLowerCase());
+
+              // Check if any artist matches
+              const hasMatchingArtist = trackArtists.some(artist =>
+                bestMatchArtists.includes(artist)
+              );
+
+              // If same artist, must have different song name
+              if (hasMatchingArtist) {
+                return track.name.toLowerCase() !== bestMatch.name.toLowerCase();
+              }
+
+              // Different artist, always allowed
+              return true;
+            }).slice(0, 2)
+          : [];
+
         return {
           query,
           success: true,
-          bestMatch: tracks[0]
+          bestMatch: bestMatch
             ? {
-                id: tracks[0].id,
-                uri: tracks[0].uri,
-                name: tracks[0].name,
-                artists: tracks[0].artists.map((artist) => artist.name),
-                album: tracks[0].album.name,
-                albumImage: tracks[0].album.images[0]?.url,
-                popularity: (tracks[0] as any).popularity,
-                confidence: calculateConfidence(query, tracks[0]),
-                previewUrl: tracks[0].preview_url,
+                id: bestMatch.id,
+                uri: bestMatch.uri,
+                name: bestMatch.name,
+                artists: bestMatch.artists.map((artist) => artist.name),
+                album: bestMatch.album.name,
+                albumImage: bestMatch.album.images[0]?.url,
+                popularity: (bestMatch as any).popularity,
+                confidence: calculateConfidence(query, bestMatch),
+                previewUrl: bestMatch.preview_url,
               }
             : null,
-          alternatives: tracks.slice(1, 3).map((track) => ({
+          alternatives: filteredAlternatives.map((track) => ({
             id: track.id,
             uri: track.uri,
             name: track.name,

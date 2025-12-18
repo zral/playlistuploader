@@ -10,10 +10,9 @@
 
   let description: string = '';
   let lengthType: 'songs' | 'duration' = 'songs';
-  let songCount: number = 20;
-  let durationMinutes: number = 60;
+  let songCount: number = 25;
+  let durationMinutes: number = 90;
   let loading: boolean = false;
-  let expanded: boolean = false;
 
   async function handleGenerate(): Promise<void> {
     if (!description.trim()) {
@@ -48,9 +47,6 @@
 
       // Call parent callback with generated playlist
       onGenerate(data.playlist);
-
-      // Collapse the AI generator after successful generation
-      expanded = false;
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || error.message || 'Failed to generate playlist';
       dispatch('notification', {
@@ -61,34 +57,23 @@
       loading = false;
     }
   }
-
-  function toggleExpanded(): void {
-    expanded = !expanded;
-  }
 </script>
 
 <div class="ai-generator">
-  <button class="toggle-button" on:click={toggleExpanded} type="button">
-    <span class="icon">{expanded ? '🔽' : '🤖'}</span>
-    <span class="text">
-      {expanded ? 'Hide AI Generator' : 'Generate Playlist with AI'}
-    </span>
-  </button>
+  <div class="form-header">
+    <h2>Create Your Perfect Playlist</h2>
+    <p class="subtitle">Describe your vibe, we'll find the tracks</p>
+  </div>
 
-  {#if expanded}
-    <div class="ai-form">
-      <div class="form-header">
-        <h3>🎵 AI Playlist Generator</h3>
-        <p>Describe your perfect playlist and let AI create it for you!</p>
-      </div>
+  <div class="ai-form">
 
       <div class="form-group">
-        <label for="description">Playlist Description</label>
+        <label for="description">What's the vibe?</label>
         <textarea
           id="description"
           bind:value={description}
-          placeholder="e.g., Upbeat 80s pop for a road trip, Relaxing jazz for studying, High-energy workout music..."
-          rows="3"
+          placeholder="Upbeat Nordic pop for a road trip, chill study music with piano, 90s hip-hop workout bangers..."
+          rows="4"
           maxlength="500"
           disabled={loading}
         ></textarea>
@@ -155,18 +140,10 @@
           <span class="spinner"></span>
           <span>Generating...</span>
         {:else}
-          <span>✨ Generate Playlist</span>
+          <span>Generate Playlist</span>
         {/if}
       </button>
-
-      <div class="disclaimer">
-        <small>
-          💡 <strong>Tip:</strong> You can edit the generated playlist before searching.
-          Limited to 5 generations per day.
-        </small>
-      </div>
     </div>
-  {/if}
 </div>
 
 <style>
@@ -175,61 +152,30 @@
     background: var(--bg-card);
     border: 2px solid var(--christmas-green);
     border-radius: 12px;
-    padding: 1.5rem;
-  }
-
-  .toggle-button {
-    width: 100%;
-    padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, var(--christmas-green) 0%, var(--christmas-dark-green) 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    transition: all 0.3s ease;
-    position: relative;
-  }
-
-  .toggle-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(22, 91, 51, 0.4);
-  }
-
-  .toggle-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .icon {
-    font-size: 1.5rem;
-  }
-
-  .ai-form {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 2px dashed var(--accent);
+    padding: 2rem;
   }
 
   .form-header {
     margin-bottom: 1.5rem;
+    text-align: center;
   }
 
-  .form-header h3 {
+  .form-header h2 {
     margin: 0 0 0.5rem 0;
-    color: var(--accent);
-    font-size: 1.4rem;
+    color: var(--text-primary);
+    font-size: 2rem;
+    font-weight: 700;
   }
 
-  .form-header p {
+  .form-header .subtitle {
     margin: 0;
     color: var(--text-secondary);
-    font-size: 0.95rem;
+    font-size: 1rem;
+    font-weight: 400;
+  }
+
+  .ai-form {
+    margin-top: 1.5rem;
   }
 
   .form-group {
@@ -258,21 +204,21 @@
 
   textarea {
     width: 100%;
-    padding: 0.75rem;
-    border: 3px solid var(--christmas-gold);
+    padding: 1rem;
+    border: 2px solid var(--border);
     border-radius: 8px;
     font-size: 1rem;
     font-family: inherit;
     resize: vertical;
     transition: all 0.3s ease;
     background: var(--bg-secondary);
-    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+    color: var(--text-primary);
   }
 
   textarea:focus {
     outline: none;
-    border-color: var(--christmas-gold);
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+    border-color: var(--christmas-green);
+    box-shadow: 0 0 0 3px rgba(22, 91, 51, 0.1);
   }
 
   textarea:disabled {
@@ -299,6 +245,7 @@
     gap: 0.5rem;
     cursor: pointer;
     font-weight: normal;
+    color: var(--text-primary);
   }
 
   .radio-label input[type="radio"] {
@@ -311,12 +258,15 @@
     border: 2px solid var(--border);
     border-radius: 8px;
     font-size: 1rem;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   input[type="number"]:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--christmas-green);
+    box-shadow: 0 0 0 3px rgba(22, 91, 51, 0.1);
   }
 
   input[type="number"]:disabled {
@@ -327,27 +277,29 @@
   .generate-button {
     width: 100%;
     padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, var(--christmas-red) 0%, var(--christmas-dark-red) 100%);
+    background: #1db954;
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 50px;
     font-size: 1.1rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(29, 185, 84, 0.4);
   }
 
   .generate-button:hover:not(:disabled) {
+    background: #1ed760;
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(196, 30, 58, 0.4);
+    box-shadow: 0 6px 20px rgba(29, 185, 84, 0.5);
   }
 
   .generate-button:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
@@ -362,18 +314,5 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
-  }
-
-  .disclaimer {
-    margin-top: 1rem;
-    padding: 0.75rem;
-    background: rgba(255, 193, 7, 0.1);
-    border-radius: 6px;
-    text-align: center;
-  }
-
-  .disclaimer small {
-    color: var(--text-secondary);
-    line-height: 1.4;
   }
 </style>

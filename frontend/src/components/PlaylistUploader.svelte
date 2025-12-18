@@ -1,8 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
+  import { fade, slide } from 'svelte/transition';
   import { search, playlists } from '../lib/api';
   import type { UserResponse, SpotifyPlaylist, SpotifyTrack, SearchResult } from '../types/api';
-  import SongResults from './SongResults.svelte';
+  import CompactSongList from './CompactSongList.svelte';
   import AIPlaylistGenerator from './AIPlaylistGenerator.svelte';
 
   export let user: UserResponse;
@@ -14,7 +15,7 @@
   let playlistText: string = '';
   let userPlaylists: SpotifyPlaylist[] = [];
   let selectedPlaylist: string = '';
-  let newPlaylistName: string = '';
+  let newPlaylistName: string = 'My Playlist';
   let searchResults: SearchResult[] = [];
   let selectedTracks: SpotifyTrack[] = []; // Tracks selected by user
   let loading: boolean = false;
@@ -22,6 +23,21 @@
   let progress: { current: number; total: number } = { current: 0, total: 0 };
   let inputMode: 'text' | 'file' = 'text';
   let uploadedFile: File | null = null;
+  let showManualEntry: boolean = false;
+  let compactSongs: Array<{
+    id: string;
+    title: string;
+    artist: string;
+    confidence: number;
+    uri: string;
+    alternatives: Array<{
+      id: string;
+      title: string;
+      artist: string;
+      confidence: number;
+      uri: string;
+    }>;
+  }> = [];
 
   function handleSelectionChange(event: CustomEvent<{ selectedTracks: SpotifyTrack[] }>): void {
     selectedTracks = event.detail.selectedTracks;
@@ -236,8 +252,26 @@
         };
       });
 
+      // Transform search results to compact format
+      compactSongs = searchResults
+        .filter(r => r.tracks && r.tracks.length > 0)
+        .map(r => ({
+          id: r.tracks[0].id,
+          title: r.tracks[0].name,
+          artist: r.tracks[0].artists.map(a => a.name).join(', '),
+          confidence: r.confidence || 0,
+          uri: r.tracks[0].uri,
+          alternatives: r.tracks.slice(1, 3).map(alt => ({
+            id: alt.id,
+            title: alt.name,
+            artist: alt.artists.map(a => a.name).join(', '),
+            confidence: Math.max(0, (r.confidence || 0) - 10), // Slightly lower confidence for alternatives
+            uri: alt.uri
+          }))
+        }));
+
       dispatch('notification', {
-        message: `Found matches for ${searchResults.filter(r => r.tracks && r.tracks.length > 0).length} out of ${songs.length} songs`,
+        message: `Found matches for ${compactSongs.length} out of ${songs.length} songs`,
         type: 'success',
       });
     } catch (error: any) {
@@ -247,6 +281,63 @@
         type: 'error',
       });
       step = 1;
+    } finally {
+      loading = false;
+    }
+  }
+
+  function handleCompactListUpload(event: CustomEvent<{ selectedTracks: string[]; playlistId?: string }>): void {
+    handleUploadWithUris(event.detail.selectedTracks, event.detail.playlistId);
+  }
+
+  async function handleUploadWithUris(trackUris: string[], existingPlaylistId?: string): Promise<void> {
+    if (trackUris.length === 0) {
+      dispatch('notification', {
+        message: 'No tracks selected. Please select at least one track to add.',
+        type: 'error',
+      });
+      return;
+    }
+
+    loading = true;
+    step = 3;
+
+    try {
+      let playlistId: string;
+      let playlistNameForMessage: string;
+
+      if (existingPlaylistId) {
+        // Adding to existing playlist
+        playlistId = existingPlaylistId;
+        const existingPlaylist = userPlaylists.find(p => p.id === existingPlaylistId);
+        playlistNameForMessage = existingPlaylist?.name || 'playlist';
+      } else {
+        // Create new playlist
+        const data = await playlists.create(
+          newPlaylistName.trim(),
+          `Created with Spotify Playlist Uploader on ${new Date().toLocaleDateString()}`
+        );
+        playlistId = data.playlist.id;
+        playlistNameForMessage = newPlaylistName;
+      }
+
+      // Add tracks to playlist
+      await playlists.addTracks(playlistId, trackUris);
+
+      dispatch('notification', {
+        message: `Successfully added ${trackUris.length} tracks to "${playlistNameForMessage}"!`,
+        type: 'success',
+      });
+
+      // Reset
+      resetForm();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Upload failed';
+      dispatch('notification', {
+        message: errorMessage,
+        type: 'error',
+      });
+      step = 2;
     } finally {
       loading = false;
     }
@@ -305,14 +396,20 @@
     }
   }
 
+  function handlePlaylistNameChange(event: CustomEvent<{ name: string }>): void {
+    newPlaylistName = event.detail.name;
+  }
+
   function resetForm(): void {
     playlistText = '';
     searchResults = [];
+    compactSongs = [];
     selectedTracks = [];
     selectedPlaylist = '';
-    newPlaylistName = '';
+    newPlaylistName = 'My Playlist';
     step = 1;
     progress = { current: 0, total: 0 };
+    showManualEntry = false;
   }
 
   function goBack(): void {
@@ -324,31 +421,50 @@
     playlistText = generatedPlaylist;
     inputMode = 'text'; // Switch to text mode to show the generated playlist
 
-    // Optionally scroll to the textarea for better UX
+    // Automatically search and show review pane
     setTimeout(() => {
-      const textarea = document.getElementById('playlist-textarea');
-      if (textarea) {
-        textarea.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
-        textarea.focus();
-      }
+      handleSearch();
     }, 100);
   }
 </script>
 
 <div class="uploader">
-  {#if step === 1}
-    <!-- AI Playlist Generator -->
-    <AIPlaylistGenerator
-      onGenerate={handleAIGenerate}
-      on:notification
-    />
+  <!-- AI Playlist Generator - Always Visible -->
+  <AIPlaylistGenerator
+    onGenerate={handleAIGenerate}
+    on:notification
+  />
 
-    <!-- Input Step -->
-    <div class="card">
-      <h2>📝 Add Your Songs</h2>
+  <!-- Compact Song List - Shows after AI generation or manual search -->
+  {#if step === 2 && compactSongs.length > 0}
+    <div class="review-section" transition:slide={{ duration: 300 }}>
+      <h2 class="review-title">Review Your Playlist</h2>
+      <p class="review-subtitle">
+        ✓ {compactSongs.length} tracks found • Tap any song to see alternatives
+      </p>
+
+      <CompactSongList
+        bind:playlistName={newPlaylistName}
+        songs={compactSongs}
+        existingPlaylists={userPlaylists}
+        on:playlistNameChange={handlePlaylistNameChange}
+        on:upload={handleCompactListUpload}
+      />
+    </div>
+  {:else if step === 1}
+    <!-- Manual Entry Section - Hidden by default -->
+    {#if !showManualEntry}
+      <div class="manual-bypass" transition:fade={{ duration: 200 }}>
+        <button class="bypass-link" on:click={() => showManualEntry = true} type="button">
+          or start from scratch
+        </button>
+      </div>
+    {/if}
+
+    {#if showManualEntry}
+      <!-- Input Step -->
+      <div class="card" transition:slide={{ duration: 300 }}>
+        <h2>📝 Build Your Playlist</h2>
 
       <!-- Input mode tabs -->
       <div class="input-tabs">
@@ -419,69 +535,20 @@
         </button>
       </div>
     </div>
-
-  {:else if step === 2}
-    <!-- Results Step -->
-    <div class="card">
-      <h2>🎵 Song Matches</h2>
-      <p class="instruction">Review matches, select alternatives if needed, and choose which songs to add</p>
-
-      <SongResults results={searchResults} on:selectionChange={handleSelectionChange} />
-
-      <div class="playlist-selection">
-        <h3>Select Playlist</h3>
-
-        <div class="playlist-options">
-          <div class="option">
-            <label>
-              <input type="radio" bind:group={selectedPlaylist} value="" />
-              Create New Playlist
-            </label>
-            {#if !selectedPlaylist}
-              <input
-                type="text"
-                bind:value={newPlaylistName}
-                placeholder="New playlist name..."
-                class="playlist-name-input"
-              />
-            {/if}
-          </div>
-
-          {#each userPlaylists as playlist}
-            <div class="option">
-              <label>
-                <input type="radio" bind:group={selectedPlaylist} value={playlist.id} />
-                {playlist.name}
-                {#if playlist.tracks?.total !== undefined}
-                  <span class="track-count">({playlist.tracks.total} tracks)</span>
-                {/if}
-              </label>
-            </div>
-          {/each}
-        </div>
-      </div>
-
-      <div class="action-buttons">
-        <button class="secondary" on:click={goBack} disabled={loading}>
-          ← Back
-        </button>
-        <button class="primary" on:click={handleUpload} disabled={loading}>
-          {#if loading}
-            <div class="spinner small"></div>
-            Uploading...
-          {:else}
-            ✨ Add to Playlist
-          {/if}
-        </button>
-      </div>
-    </div>
-
+    {/if}
   {:else if step === 3}
     <!-- Uploading Step -->
-    <div class="card uploading">
-      <div class="spinner"></div>
+    <div class="card uploading" transition:fade={{ duration: 200 }}>
+      <div class="spinner-container">
+        <div class="spinner"></div>
+      </div>
       <h2>🎄 Adding tracks to your playlist...</h2>
       <p>This may take a moment</p>
+      <div class="progress-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
     </div>
   {/if}
 </div>
@@ -514,72 +581,85 @@
     min-width: 150px;
   }
 
-  .playlist-selection {
-    margin: 2rem 0;
-    padding: 1.5rem;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-  }
-
-  .playlist-selection h3 {
-    margin-bottom: 1rem;
-  }
-
-  .playlist-options {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .option {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .option label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 4px;
-    transition: background 0.2s;
-  }
-
-  .option label:hover {
-    background: var(--bg-card);
-  }
-
-  .option input[type="radio"] {
-    cursor: pointer;
-  }
-
-  .track-count {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-  }
-
-  .playlist-name-input {
-    margin-left: 1.5rem;
-    width: calc(100% - 1.5rem);
-  }
-
   .uploading {
     text-align: center;
     padding: 3rem;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .spinner-container {
+    margin: 0 auto 2rem;
   }
 
   .uploading .spinner {
-    margin: 0 auto 2rem;
+    margin: 0 auto;
   }
 
   .uploading h2 {
     margin-bottom: 0.5rem;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   .uploading p {
     color: var(--text-secondary);
+  }
+
+  .progress-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .progress-dots span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--christmas-green);
+    animation: bounce 1.4s ease-in-out infinite;
+  }
+
+  .progress-dots span:nth-child(1) {
+    animation-delay: 0s;
+  }
+
+  .progress-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .progress-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes bounce {
+    0%, 80%, 100% {
+      transform: scale(0);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
 
   .spinner.small {
@@ -686,6 +766,45 @@
     word-wrap: break-word;
   }
 
+  /* New Layout Styles */
+  .review-section {
+    margin-top: 2rem;
+  }
+
+  .review-title {
+    text-align: center;
+    color: var(--text-primary);
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .review-subtitle {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .manual-bypass {
+    text-align: center;
+    padding: 2rem 0;
+  }
+
+  .bypass-link {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0.5rem 1rem;
+    transition: color 0.2s;
+  }
+
+  .bypass-link:hover {
+    color: var(--accent);
+  }
+
   @media (max-width: 768px) {
     .action-buttons {
       flex-direction: column;
@@ -714,6 +833,14 @@
     .file-upload-label {
       padding: 2rem 1rem;
       flex-direction: column;
+    }
+
+    .review-title {
+      font-size: 1.5rem;
+    }
+
+    .review-subtitle {
+      font-size: 0.9rem;
     }
   }
 </style>
