@@ -56,36 +56,53 @@ async function callOpenRouter(messages: AIMessage[], model?: string): Promise<st
 
   logger.info('Calling OpenRouter API', { model: model || 'default' });
 
-  const response = await axios.post<OpenRouterResponse>(
-    'https://openrouter.ai/api/v1/chat/completions',
-    {
-      model: model || process.env.OPENROUTER_MODEL || 'openai/gpt-3.5-turbo',
-      messages: messages,
-      temperature: 0.8,
-      max_tokens: 1500,
-      top_p: 0.9
-    },
-    {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost',
-        'X-Title': 'Christmas Spotify Playlist Uploader'
+  try {
+    const response = await axios.post<OpenRouterResponse>(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model: model || process.env.OPENROUTER_MODEL || 'openai/gpt-3.5-turbo',
+        messages: messages,
+        temperature: 0.8,
+        max_tokens: 1500,
+        top_p: 0.9
       },
-      timeout: 30000
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost',
+          'X-Title': 'Christmas Spotify Playlist Uploader'
+        },
+        timeout: 30000
+      }
+    );
+
+    if (!response.data.choices || response.data.choices.length === 0) {
+      throw new Error('No response from OpenRouter API');
     }
-  );
 
-  if (!response.data.choices || response.data.choices.length === 0) {
-    throw new Error('No response from OpenRouter API');
+    const content = response.data.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('Empty response from OpenRouter API');
+    }
+
+    return content;
+  } catch (error: any) {
+    if (error.response) {
+      // Log detailed error information from OpenRouter
+      logger.error('OpenRouter API error', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+
+      // Throw a more descriptive error
+      const errorMessage = error.response.data?.error?.message || error.response.data?.error || error.message;
+      throw new Error(`OpenRouter API error (${error.response.status}): ${errorMessage}`);
+    }
+    throw error;
   }
-
-  const content = response.data.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error('Empty response from OpenRouter API');
-  }
-
-  return content;
 }
 
 /**

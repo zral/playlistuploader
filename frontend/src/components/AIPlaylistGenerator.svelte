@@ -73,7 +73,6 @@
     <span class="text">
       {expanded ? 'Hide AI Generator' : 'Generate Playlist with AI'}
     </span>
-    <span class="badge">NEW</span>
   </button>
 
   {#if expanded}
@@ -146,16 +145,6 @@
         </div>
       </div>
 
-      <div class="examples">
-        <strong>💡 Example prompts:</strong>
-        <ul>
-          <li>"Energetic EDM for a party"</li>
-          <li>"Calm acoustic music for a quiet evening"</li>
-          <li>"Best of 90s alternative rock"</li>
-          <li>"Christmas songs for a family dinner"</li>
-        </ul>
-      </div>
-
       <button
         class="generate-button"
         on:click={handleGenerate}
@@ -183,8 +172,8 @@
 <style>
   .ai-generator {
     margin-bottom: 2rem;
-    background: linear-gradient(135deg, #667eea22 0%, #764ba222 100%);
-    border: 2px solid var(--accent);
+    background: var(--bg-card);
+    border: 2px solid var(--christmas-green);
     border-radius: 12px;
     padding: 1.5rem;
   }
@@ -192,7 +181,7 @@
   .toggle-button {
     width: 100%;
     padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--christmas-green) 0%, var(--christmas-dark-green) 100%);
     color: white;
     border: none;
     border-radius: 8px;
@@ -209,7 +198,7 @@
 
   .toggle-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 6px 20px rgba(22, 91, 51, 0.4);
   }
 
   .toggle-button:disabled {
@@ -219,19 +208,6 @@
 
   .icon {
     font-size: 1.5rem;
-  }
-
-  .badge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: #ff6b6b;
-    color: white;
-    font-size: 0.65rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
   }
 
   .ai-form {
@@ -283,17 +259,20 @@
   textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 2px solid var(--border);
+    border: 3px solid var(--christmas-gold);
     border-radius: 8px;
     font-size: 1rem;
     font-family: inherit;
     resize: vertical;
-    transition: border-color 0.2s;
+    transition: all 0.3s ease;
+    background: var(--bg-secondary);
+    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
   }
 
   textarea:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--christmas-gold);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
   }
 
   textarea:disabled {
@@ -345,33 +324,10 @@
     cursor: not-allowed;
   }
 
-  .examples {
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1.25rem;
-    border-left: 4px solid var(--accent);
-  }
-
-  .examples strong {
-    color: var(--accent);
-  }
-
-  .examples ul {
-    margin: 0.5rem 0 0 0;
-    padding-left: 1.5rem;
-  }
-
-  .examples li {
-    margin: 0.25rem 0;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-  }
-
   .generate-button {
     width: 100%;
     padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, #00d2ff 0%, #3a47d5 100%);
+    background: linear-gradient(135deg, var(--christmas-red) 0%, var(--christmas-dark-red) 100%);
     color: white;
     border: none;
     border-radius: 8px;
@@ -387,7 +343,7 @@
 
   .generate-button:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(58, 71, 213, 0.4);
+    box-shadow: 0 6px 20px rgba(196, 30, 58, 0.4);
   }
 
   .generate-button:disabled {
