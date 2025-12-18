@@ -14,13 +14,13 @@
 
   let playlistText: string = '';
   let userPlaylists: SpotifyPlaylist[] = [];
-  let selectedPlaylist: string = '';
+  let _selectedPlaylist: string = '';
   let newPlaylistName: string = 'My Playlist';
   let searchResults: SearchResult[] = [];
-  let selectedTracks: SpotifyTrack[] = []; // Tracks selected by user
+  let _selectedTracks: SpotifyTrack[] = []; // Tracks selected by user
   let loading: boolean = false;
   let step: 1 | 2 | 3 = 1; // 1: input, 2: results, 3: uploading
-  let progress: { current: number; total: number } = { current: 0, total: 0 };
+  let _progress: { current: number; total: number } = { current: 0, total: 0 };
   let inputMode: 'text' | 'file' = 'text';
   let uploadedFile: File | null = null;
   let showManualEntry: boolean = false;
@@ -206,7 +206,7 @@
         throw new Error('Maximum 100 songs allowed at once');
       }
 
-      progress = { current: 0, total: songs.length };
+      _progress = { current: 0, total: songs.length };
 
       // Batch search
       const data = await search.batch(songs);
@@ -354,11 +354,11 @@
     playlistText = '';
     searchResults = [];
     compactSongs = [];
-    selectedTracks = [];
-    selectedPlaylist = '';
+    _selectedTracks = [];
+    _selectedPlaylist = '';
     newPlaylistName = 'My Playlist';
     step = 1;
-    progress = { current: 0, total: 0 };
+    _progress = { current: 0, total: 0 };
     showManualEntry = false;
   }
 

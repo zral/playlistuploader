@@ -20,14 +20,7 @@
     "baseUrl": ".",
     "allowImportingTsExtensions": false,
     "moduleDetection": "force",
-    "verbatimModuleSyntax": false,
-
-    /**
-     * Svelte Preprocess cannot figure out whether you have
-     * a value or a type, so tell TypeScript to enforce using
-     * `import type` instead of `import` for Types.
-     */
-    "importsNotUsedAsValues": "error",
+    "verbatimModuleSyntax": true,
 
     /**
      * TypeScript strict mode
@@ -38,6 +31,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
-  "exclude": ["node_modules/*", "dist", "build"]
+  "include": ["src/**/*.ts", "src/**/*.svelte"],
+  "exclude": ["node_modules/*", "dist", "build", "src/**/*.test.js", "src/test/**/*.js"]
 }
