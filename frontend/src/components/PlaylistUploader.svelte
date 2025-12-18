@@ -6,7 +6,7 @@
   import CompactSongList from './CompactSongList.svelte';
   import AIPlaylistGenerator from './AIPlaylistGenerator.svelte';
 
-  export let user: UserResponse;
+  export const user: UserResponse = {} as UserResponse;
 
   const dispatch = createEventDispatcher<{
     notification: { message: string; type: 'info' | 'success' | 'error' };
@@ -39,10 +39,6 @@
     }>;
   }> = [];
 
-  function handleSelectionChange(event: CustomEvent<{ selectedTracks: SpotifyTrack[] }>): void {
-    selectedTracks = event.detail.selectedTracks;
-  }
-
   function handleFileUpload(event: Event): void {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
@@ -74,7 +70,7 @@
 
         // Detect header line (skip "Shazam Library" title if present)
         let headerLineIndex = 0;
-        let headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        let headers = lines[0]?.split(',').map(h => h.trim().replace(/"/g, '')) || [];
 
         // Check if first line has Title/Artist columns
         const hasValidHeaders = headers.some(h =>
@@ -84,7 +80,7 @@
         // If first line doesn't have valid headers, try second line (Shazam format)
         if (!hasValidHeaders && lines.length > 1) {
           headerLineIndex = 1;
-          headers = lines[1].split(',').map(h => h.trim().replace(/"/g, ''));
+          headers = lines[1]?.split(',').map(h => h.trim().replace(/"/g, '')) || [];
         }
 
         // Find Title and Artist columns (case-insensitive)
@@ -102,7 +98,9 @@
         // Parse songs (start from line after header)
         const songs: string[] = [];
         for (let i = headerLineIndex + 1; i < lines.length; i++) {
-          const values = parseCSVLine(lines[i]);
+          const line = lines[i];
+          if (!line) continue;
+          const values = parseCSVLine(line);
           if (values.length > Math.max(titleIndex, artistIndex)) {
             const title = values[titleIndex]?.trim();
             const artist = values[artistIndex]?.trim();
@@ -224,8 +222,9 @@
             uri: result.bestMatch.uri,
             name: result.bestMatch.name,
             artists: result.bestMatch.artists.map((name: string) => ({ name })),
-            album: { name: result.bestMatch.album, images: result.bestMatch.albumImage ? [{ url: result.bestMatch.albumImage }] : [] },
+            album: { name: result.bestMatch.album, images: result.bestMatch.albumImage ? [{ url: result.bestMatch.albumImage, height: 300, width: 300 }] : [] },
             preview_url: result.bestMatch.previewUrl || null,
+            duration_ms: 0,
           });
         }
 
@@ -239,6 +238,7 @@
               artists: alt.artists.map((name: string) => ({ name })),
               album: { name: alt.album, images: [] },
               preview_url: alt.previewUrl || null,
+              duration_ms: 0,
             });
           });
         }
@@ -254,13 +254,15 @@
 
       // Transform search results to compact format
       compactSongs = searchResults
-        .filter(r => r.tracks && r.tracks.length > 0)
-        .map(r => ({
-          id: r.tracks[0].id,
-          title: r.tracks[0].name,
-          artist: r.tracks[0].artists.map(a => a.name).join(', '),
+        .filter(r => r.tracks && r.tracks.length > 0 && r.tracks[0])
+        .map(r => {
+          const firstTrack = r.tracks[0]!;
+          return {
+          id: firstTrack.id,
+          title: firstTrack.name,
+          artist: firstTrack.artists.map(a => a.name).join(', '),
           confidence: r.confidence || 0,
-          uri: r.tracks[0].uri,
+          uri: firstTrack.uri,
           alternatives: r.tracks.slice(1, 3).map(alt => ({
             id: alt.id,
             title: alt.name,
@@ -268,7 +270,8 @@
             confidence: Math.max(0, (r.confidence || 0) - 10), // Slightly lower confidence for alternatives
             uri: alt.uri
           }))
-        }));
+        };
+        });
 
       dispatch('notification', {
         message: `Found matches for ${compactSongs.length} out of ${songs.length} songs`,
@@ -343,59 +346,6 @@
     }
   }
 
-  async function handleUpload(): Promise<void> {
-    if (!selectedPlaylist && !newPlaylistName.trim()) {
-      dispatch('notification', {
-        message: 'Please select or create a playlist',
-        type: 'error',
-      });
-      return;
-    }
-
-    loading = true;
-    step = 3;
-
-    try {
-      let playlistId = selectedPlaylist;
-
-      // Create new playlist if needed
-      if (!selectedPlaylist && newPlaylistName.trim()) {
-        const data = await playlists.create(
-          newPlaylistName.trim(),
-          `Created by Listify on ${new Date().toLocaleDateString()}`
-        );
-        playlistId = data.playlist.id;
-      }
-
-      // Get track URIs from selected tracks
-      const trackUris = selectedTracks.map(track => track.uri);
-
-      if (trackUris.length === 0) {
-        throw new Error('No tracks selected. Please select at least one track to add.');
-      }
-
-      // Add tracks to playlist
-      await playlists.addTracks(playlistId, trackUris);
-
-      dispatch('notification', {
-        message: `Successfully added ${trackUris.length} tracks to playlist!`,
-        type: 'success',
-      });
-
-      // Reset
-      resetForm();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Upload failed';
-      dispatch('notification', {
-        message: errorMessage,
-        type: 'error',
-      });
-      step = 2;
-    } finally {
-      loading = false;
-    }
-  }
-
   function handlePlaylistNameChange(event: CustomEvent<{ name: string }>): void {
     newPlaylistName = event.detail.name;
   }
@@ -410,11 +360,6 @@
     step = 1;
     progress = { current: 0, total: 0 };
     showManualEntry = false;
-  }
-
-  function goBack(): void {
-    step = 1;
-    searchResults = [];
   }
 
   function handleAIGenerate(generatedPlaylist: string, suggestedName: string): void {

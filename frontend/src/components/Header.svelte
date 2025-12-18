@@ -24,13 +24,12 @@
         <div class="light"></div>
         <div class="light"></div>
       </div>
-      <p class="subtitle">Listify your vibe</p>
     </div>
 
     {#if user}
       <div class="user-section">
         <div class="user-info">
-          {#if user.user.images && user.user.images.length > 0}
+          {#if user.user.images && user.user.images.length > 0 && user.user.images[0]}
             <img src={user.user.images[0].url} alt={user.user.display_name} class="user-avatar" />
           {/if}
           <div>
