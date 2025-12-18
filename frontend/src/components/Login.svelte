@@ -27,10 +27,9 @@
 <div class="login-container">
   <div class="card login-card">
     <div class="christmas-icon">🎅</div>
-    <h2>Welcome to Listify!</h2>
+    <h2>Listify your vibe</h2>
     <p class="description">
-      Transform your text-based playlists into Spotify magic this holiday season.
-      Simply paste your song list, and we'll find and add the best matches to your Spotify playlist!
+      Turn your music taste into awesome playlists in seconds! You bring the vibe, we do the magic. Your vibe, your way. 🎧
     </p>
 
     <div class="features">

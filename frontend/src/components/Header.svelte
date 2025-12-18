@@ -24,7 +24,7 @@
         <div class="light"></div>
         <div class="light"></div>
       </div>
-      <p class="subtitle">Upload your text playlists to Spotify with festive cheer!</p>
+      <p class="subtitle">Listify your vibe</p>
     </div>
 
     {#if user}

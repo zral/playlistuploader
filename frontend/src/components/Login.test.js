@@ -16,7 +16,7 @@ describe('Login Component', () => {
 
   test('displays Christmas greeting', () => {
     render(Login);
-    expect(screen.getByText(/welcome to listify/i)).toBeInTheDocument();
+    expect(screen.getByText(/listify your vibe/i)).toBeInTheDocument();
   });
 
   test('shows feature list', () => {
