@@ -204,7 +204,7 @@ function parsePlaylistResponse(content: string): ParsedPlaylist {
 
   for (let i = 0; i < allLines.length; i++) {
     const line = allLines[i];
-    if (line.length > 0) {
+    if (line && line.length > 0) {
       // First non-empty line is the playlist name (if it doesn't contain " - ")
       if (!line.includes(' - ')) {
         playlistName = line;
