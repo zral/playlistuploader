@@ -27,7 +27,7 @@
 <div class="login-container">
   <div class="card login-card">
     <div class="christmas-icon">🎅</div>
-    <h2>Listify your vibe</h2>
+    <h2>Listify your vibe your way</h2>
     <p class="description">
       Turn your music taste into awesome playlists in seconds! You bring the vibe, we do the magic. Your vibe, your way. 🎧
     </p>
