@@ -27,7 +27,8 @@
       "Bash(npm search:*)",
       "Bash(find:*)",
       "Bash(npm test:*)",
-      "Bash(NODE_OPTIONS=--experimental-vm-modules npm test:*)"
+      "Bash(NODE_OPTIONS=--experimental-vm-modules npm test:*)",
+      "WebFetch(domain:developer.spotify.com)"
     ],
     "deny": [],
     "ask": []

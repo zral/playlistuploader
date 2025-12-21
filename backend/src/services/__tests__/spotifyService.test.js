@@ -174,6 +174,29 @@ describe('spotifyService', () => {
         expect.any(Object)
       );
     });
+
+    test('should include fields parameter to limit response size', async () => {
+      const mockResponse = {
+        data: {
+          tracks: {
+            items: [],
+          },
+        },
+      };
+
+      mockAxiosGet.mockResolvedValue(mockResponse);
+
+      await spotifyService.searchTrack('valid_token', 'test song');
+
+      const call = mockAxiosGet.mock.calls[0][0];
+      expect(call).toContain('fields=');
+      expect(call).toContain('tracks.items');
+      expect(call).toContain('id');
+      expect(call).toContain('uri');
+      expect(call).toContain('name');
+      expect(call).toContain('artists');
+      expect(call).toContain('album');
+    });
   });
 
   describe('getUserPlaylists', () => {
@@ -202,7 +225,7 @@ describe('spotifyService', () => {
       expect(playlists.length).toBe(1);
       expect(playlists[0].name).toBe('Christmas Songs');
       expect(mockAxiosGet).toHaveBeenCalledWith(
-        'https://api.spotify.com/v1/me/playlists?limit=50',
+        expect.stringContaining('https://api.spotify.com/v1/me/playlists'),
         expect.objectContaining({
           headers: {
             Authorization: 'Bearer valid_token',
@@ -223,9 +246,29 @@ describe('spotifyService', () => {
       await spotifyService.getUserPlaylists('valid_token', 20);
 
       expect(mockAxiosGet).toHaveBeenCalledWith(
-        'https://api.spotify.com/v1/me/playlists?limit=20',
+        expect.stringContaining('limit=20'),
         expect.any(Object)
       );
+    });
+
+    test('should include fields parameter to limit response size', async () => {
+      const mockResponse = {
+        data: {
+          items: [],
+        },
+      };
+
+      mockAxiosGet.mockResolvedValue(mockResponse);
+
+      await spotifyService.getUserPlaylists('valid_token', 50);
+
+      const call = mockAxiosGet.mock.calls[0][0];
+      expect(call).toContain('fields=');
+      expect(call).toContain('items');
+      expect(call).toContain('id');
+      expect(call).toContain('name');
+      expect(call).toContain('owner');
+      expect(call).toContain('tracks.total');
     });
   });
 
@@ -441,13 +484,35 @@ describe('spotifyService', () => {
       expect(user.display_name).toBe('Test User');
       expect(user.email).toBe('test@example.com');
       expect(mockAxiosGet).toHaveBeenCalledWith(
-        'https://api.spotify.com/v1/me',
+        expect.stringContaining('https://api.spotify.com/v1/me'),
         expect.objectContaining({
           headers: {
             Authorization: 'Bearer valid_token',
           },
         })
       );
+    });
+
+    test('should include fields parameter to limit response size', async () => {
+      const mockResponse = {
+        data: {
+          id: 'user123',
+          display_name: 'Test User',
+          email: 'test@example.com',
+          images: [],
+        },
+      };
+
+      mockAxiosGet.mockResolvedValue(mockResponse);
+
+      await spotifyService.getCurrentUser('valid_token');
+
+      const call = mockAxiosGet.mock.calls[0][0];
+      expect(call).toContain('fields=');
+      expect(call).toContain('id');
+      expect(call).toContain('display_name');
+      expect(call).toContain('email');
+      expect(call).toContain('images');
     });
   });
 
@@ -521,6 +586,71 @@ describe('spotifyService', () => {
       expect(stats).toHaveProperty('state');
       expect(stats).toHaveProperty('stats');
       expect(stats.state).toBe('closed'); // Initially closed
+    });
+  });
+
+  describe('getPlaylist', () => {
+    test('should get playlist details', async () => {
+      const mockResponse = {
+        data: {
+          id: 'playlist123',
+          name: 'Test Playlist',
+          description: 'Test description',
+          public: true,
+          collaborative: false,
+          owner: {
+            id: 'user123',
+            display_name: 'Test User',
+          },
+          tracks: {
+            total: 10,
+          },
+          images: [],
+          uri: 'spotify:playlist:123',
+          external_urls: {
+            spotify: 'https://open.spotify.com/playlist/123',
+          },
+        },
+      };
+
+      mockAxiosGet.mockResolvedValue(mockResponse);
+
+      const playlist = await spotifyService.getPlaylist('valid_token', 'playlist123');
+
+      expect(playlist.id).toBe('playlist123');
+      expect(playlist.name).toBe('Test Playlist');
+      expect(mockAxiosGet).toHaveBeenCalledWith(
+        expect.stringContaining('https://api.spotify.com/v1/playlists/playlist123'),
+        expect.objectContaining({
+          headers: {
+            Authorization: 'Bearer valid_token',
+          },
+        })
+      );
+    });
+
+    test('should include fields parameter to limit response size', async () => {
+      const mockResponse = {
+        data: {
+          id: 'playlist123',
+          name: 'Test Playlist',
+        },
+      };
+
+      mockAxiosGet.mockResolvedValue(mockResponse);
+
+      await spotifyService.getPlaylist('valid_token', 'playlist123');
+
+      const call = mockAxiosGet.mock.calls[0][0];
+      expect(call).toContain('fields=');
+      expect(call).toContain('id');
+      expect(call).toContain('name');
+      expect(call).toContain('description');
+      expect(call).toContain('owner');
+      expect(call).toContain('tracks.total');
+      expect(call).toContain('images');
+      expect(call).toContain('uri');
+      expect(call).toContain('external_urls');
     });
   });
 

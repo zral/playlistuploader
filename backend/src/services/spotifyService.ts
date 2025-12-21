@@ -136,12 +136,20 @@ export async function getCurrentUser(accessToken: string): Promise<SpotifyUser> 
   }
 
   // Cache miss - fetch from API
-  const response = await axios.get<SpotifyUser>(`${SPOTIFY_API_BASE}/me`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-    timeout: DEFAULT_TIMEOUT,
+  const params = new URLSearchParams({
+    // Only request fields actually used by the frontend
+    fields: 'id,display_name,email,images',
   });
+
+  const response = await axios.get<SpotifyUser>(
+    `${SPOTIFY_API_BASE}/me?${params.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      timeout: DEFAULT_TIMEOUT,
+    }
+  );
 
   const profile = response.data;
 
@@ -160,6 +168,8 @@ async function _searchTrackImpl(accessToken: string, query: string): Promise<Spo
     type: 'track',
     limit: '5', // Return top 5 matches
     market: 'from_token', // Use the user's market for preview availability
+    // Only request fields actually used by the frontend
+    fields: 'tracks.items(id,uri,name,artists(name),album(name,images),preview_url,duration_ms)',
   });
 
   const response = await axios.get<{ tracks: { items: SpotifyTrack[] } }>(
@@ -240,8 +250,14 @@ export async function getUserPlaylists(accessToken: string, limit: number = 50):
   }
 
   // Cache miss - fetch from API
+  const params = new URLSearchParams({
+    limit: limit.toString(),
+    // Only request fields actually used by the frontend
+    fields: 'items(id,name,owner(id,display_name),tracks.total)',
+  });
+
   const response = await axios.get<{ items: SpotifyPlaylist[] }>(
-    `${SPOTIFY_API_BASE}/me/playlists?limit=${limit}`,
+    `${SPOTIFY_API_BASE}/me/playlists?${params.toString()}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -335,8 +351,13 @@ export async function addTracksToPlaylist(
  * Get playlist details
  */
 export async function getPlaylist(accessToken: string, playlistId: string): Promise<SpotifyPlaylist> {
+  const params = new URLSearchParams({
+    // Only request fields actually used by the frontend and backend
+    fields: 'id,name,description,public,collaborative,owner(id,display_name),tracks.total,images,uri,external_urls.spotify',
+  });
+
   const response = await axios.get<SpotifyPlaylist>(
-    `${SPOTIFY_API_BASE}/playlists/${playlistId}`,
+    `${SPOTIFY_API_BASE}/playlists/${playlistId}?${params.toString()}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
