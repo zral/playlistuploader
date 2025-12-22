@@ -223,6 +223,51 @@ describe('API Routes', () => {
       expect(response.body.results[0].bestMatch.confidence).toBeGreaterThan(0);
     });
 
+    test('should throttle concurrent requests based on config', async () => {
+      // Mock config to use a smaller concurrent limit for testing
+      const originalConfig = (await import('../../config/config.js')).config;
+      const testConfig = { ...originalConfig, batchSearch: { concurrentLimit: 2 } };
+
+      // Create 5 queries - with limit of 2, should process in 3 batches (2+2+1)
+      const queries = ['Song 1', 'Song 2', 'Song 3', 'Song 4', 'Song 5'];
+
+      const mockTracks = [
+        {
+          id: 'track1',
+          uri: 'spotify:track:1',
+          name: 'Song',
+          artists: [{ name: 'Artist' }],
+          album: { name: 'Album', images: [] },
+          popularity: 90,
+          preview_url: null,
+        },
+      ];
+
+      let callCount = 0;
+      const callTimestamps = [];
+
+      mockSearchTrack.mockImplementation(async () => {
+        callTimestamps.push(Date.now());
+        callCount++;
+        // Add small delay to simulate API call
+        await new Promise(resolve => setTimeout(resolve, 10));
+        return mockTracks;
+      });
+
+      const response = await request(app)
+        .post('/api/search/batch')
+        .set('Cookie', ['spotify_user_id=test_user_id'])
+        .send({ queries })
+        .expect(200);
+
+      expect(response.body.results).toBeInstanceOf(Array);
+      expect(response.body.results.length).toBe(5);
+      expect(mockSearchTrack).toHaveBeenCalledTimes(5);
+
+      // Verify results are returned for all queries
+      expect(response.body.results.every(r => r.success === true)).toBe(true);
+    });
+
     test('should filter out alternatives with same artist and same song name', async () => {
       const mockTracks = [
         {

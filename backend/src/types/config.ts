@@ -14,6 +14,7 @@ export interface AppConfig {
   backup: BackupConfig;
   logging: LoggingConfig;
   cache: CacheConfig;
+  batchSearch: BatchSearchConfig;
   ai: AIConfig;
 }
 
@@ -43,6 +44,10 @@ export interface LoggingConfig {
 
 export interface CacheConfig {
   enabled: boolean;
+}
+
+export interface BatchSearchConfig {
+  concurrentLimit: number;
 }
 
 export interface AIConfig {

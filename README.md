@@ -30,6 +30,7 @@ A modern web application that converts text-based playlists into Spotify playlis
 - 📊 **Graceful Degradation** - Returns empty results instead of errors when circuit is open
 - 💾 **Redis Caching** - 60-80% reduction in Spotify API calls with intelligent caching
 - ⚡ **Lightning Fast** - Cached responses return in <10ms for repeated queries
+- 🎯 **Request Throttling** - Configurable concurrent request limiting (default: 50) prevents rate limiting
 - 🚀 **Production Ready** - Optimized Docker deployment with enterprise-grade resilience
 
 ## 🛠 Tech Stack

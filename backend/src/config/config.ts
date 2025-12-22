@@ -34,6 +34,9 @@ export const config: AppConfig = {
   cache: {
     enabled: process.env.CACHE_ENABLED !== 'false',
   },
+  batchSearch: {
+    concurrentLimit: parseInt(process.env.BATCH_SEARCH_CONCURRENT_LIMIT || '50', 10),
+  },
   ai: {
     provider: process.env.AI_PROVIDER || 'openrouter',
     fallbackProvider: process.env.AI_FALLBACK_PROVIDER,

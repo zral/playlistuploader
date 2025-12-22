@@ -11,8 +11,38 @@ import {
 import { sessionStore } from '../db/mongodb.js';
 import logger from '../utils/logger.js';
 import { SpotifyTrack } from '../types/spotify.js';
+import { config } from '../config/config.js';
 
 const router = express.Router();
+
+/**
+ * Process promises in batches with a concurrent limit
+ * Prevents overwhelming the server or hitting rate limits
+ */
+async function processInBatches<T, R>(
+  items: T[],
+  processor: (item: T) => Promise<R>,
+  concurrentLimit: number
+): Promise<R[]> {
+  const results: R[] = [];
+
+  // Process items in chunks
+  for (let i = 0; i < items.length; i += concurrentLimit) {
+    const chunk = items.slice(i, i + concurrentLimit);
+    const chunkResults = await Promise.all(chunk.map(processor));
+    results.push(...chunkResults);
+
+    logger.debug('Batch search chunk processed', {
+      chunkNumber: Math.floor(i / concurrentLimit) + 1,
+      totalChunks: Math.ceil(items.length / concurrentLimit),
+      chunkSize: chunk.length,
+      processed: results.length,
+      total: items.length,
+    });
+  }
+
+  return results;
+}
 
 // Extend Request type to include authenticated properties
 interface AuthenticatedRequest extends Request {
@@ -133,70 +163,88 @@ router.post('/search/batch', authenticateSpotify, async (req: Request, res: Resp
       return;
     }
 
-    // Search for all tracks
-    const searchPromises = queries.map(async (query: string) => {
-      try {
-        const tracks = await searchTrack(authReq.accessToken, query);
+    // Search for all tracks with throttling to prevent rate limiting
+    const startTime = Date.now();
+    const concurrentLimit = config.batchSearch.concurrentLimit;
 
-        // Filter alternatives: if same artist as best match, must have different song name
-        const bestMatch = tracks[0];
-        const filteredAlternatives = bestMatch
-          ? tracks.slice(1).filter((track) => {
-              const bestMatchArtists = bestMatch.artists.map(a => a.name.toLowerCase());
-              const trackArtists = track.artists.map(a => a.name.toLowerCase());
-
-              // Check if any artist matches
-              const hasMatchingArtist = trackArtists.some(artist =>
-                bestMatchArtists.includes(artist)
-              );
-
-              // If same artist, must have different song name
-              if (hasMatchingArtist) {
-                return track.name.toLowerCase() !== bestMatch.name.toLowerCase();
-              }
-
-              // Different artist, always allowed
-              return true;
-            }).slice(0, 2)
-          : [];
-
-        return {
-          query,
-          success: true,
-          bestMatch: bestMatch
-            ? {
-                id: bestMatch.id,
-                uri: bestMatch.uri,
-                name: bestMatch.name,
-                artists: bestMatch.artists.map((artist) => artist.name),
-                album: bestMatch.album.name,
-                albumImage: bestMatch.album.images[0]?.url,
-                popularity: (bestMatch as any).popularity,
-                confidence: calculateConfidence(query, bestMatch),
-                previewUrl: bestMatch.preview_url,
-              }
-            : null,
-          alternatives: filteredAlternatives.map((track) => ({
-            id: track.id,
-            uri: track.uri,
-            name: track.name,
-            artists: track.artists.map((artist) => artist.name),
-            album: track.album.name,
-            previewUrl: track.preview_url,
-          })),
-        };
-      } catch (error) {
-        return {
-          query,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-          bestMatch: null,
-          alternatives: [],
-        };
-      }
+    logger.info('Starting batch search', {
+      queryCount: queries.length,
+      concurrentLimit,
     });
 
-    const results = await Promise.all(searchPromises);
+    const results = await processInBatches(
+      queries,
+      async (query: string) => {
+        try {
+          const tracks = await searchTrack(authReq.accessToken, query);
+
+          // Filter alternatives: if same artist as best match, must have different song name
+          const bestMatch = tracks[0];
+          const filteredAlternatives = bestMatch
+            ? tracks.slice(1).filter((track) => {
+                const bestMatchArtists = bestMatch.artists.map(a => a.name.toLowerCase());
+                const trackArtists = track.artists.map(a => a.name.toLowerCase());
+
+                // Check if any artist matches
+                const hasMatchingArtist = trackArtists.some(artist =>
+                  bestMatchArtists.includes(artist)
+                );
+
+                // If same artist, must have different song name
+                if (hasMatchingArtist) {
+                  return track.name.toLowerCase() !== bestMatch.name.toLowerCase();
+                }
+
+                // Different artist, always allowed
+                return true;
+              }).slice(0, 2)
+            : [];
+
+          return {
+            query,
+            success: true,
+            bestMatch: bestMatch
+              ? {
+                  id: bestMatch.id,
+                  uri: bestMatch.uri,
+                  name: bestMatch.name,
+                  artists: bestMatch.artists.map((artist) => artist.name),
+                  album: bestMatch.album.name,
+                  albumImage: bestMatch.album.images[0]?.url,
+                  popularity: (bestMatch as any).popularity,
+                  confidence: calculateConfidence(query, bestMatch),
+                  previewUrl: bestMatch.preview_url,
+                }
+              : null,
+            alternatives: filteredAlternatives.map((track) => ({
+              id: track.id,
+              uri: track.uri,
+              name: track.name,
+              artists: track.artists.map((artist) => artist.name),
+              album: track.album.name,
+              previewUrl: track.preview_url,
+            })),
+          };
+        } catch (error) {
+          return {
+            query,
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+            bestMatch: null,
+            alternatives: [],
+          };
+        }
+      },
+      concurrentLimit
+    );
+
+    const duration = Date.now() - startTime;
+    logger.info('Batch search completed', {
+      queryCount: queries.length,
+      duration: `${duration}ms`,
+      successCount: results.filter(r => r.success).length,
+      failureCount: results.filter(r => !r.success).length,
+    });
 
     res.json({ results });
   } catch (error) {

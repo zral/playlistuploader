@@ -49,9 +49,13 @@ The backend implements enterprise-grade resilience and performance optimizations
 - **Circuit Breaker** (via Opossum): Opens at 50% error rate, resets after 30s
 - **Retry Logic** (via axios-retry): 3 retries with exponential backoff for 429/5xx errors
 - **Request Timeouts**: 5 seconds on all Spotify API calls
+- **Batch Search Throttling**: Concurrent request limiting (default: 50) to prevent rate limiting and server overload
+  - Configurable via `BATCH_SEARCH_CONCURRENT_LIMIT` env variable
+  - Processes large batches in chunks sequentially
+  - Detailed logging of batch processing progress
 - **Graceful Degradation**: Returns empty arrays instead of throwing errors when circuit is open
 
-See `backend/src/services/spotifyService.js` for implementation.
+See `backend/src/services/spotifyService.ts` and `backend/src/routes/api.ts` for implementation.
 
 ### Rate Limiting Strategy
 
@@ -196,6 +200,12 @@ Copy `.env.example` to `.env` and configure:
 - `SESSION_SECRET` - Generate with `openssl rand -base64 32`
 - `REDIS_URL` - Redis connection URL (default: redis://redis:6379)
 - `CACHE_ENABLED` - Enable/disable caching (default: true)
+
+**Performance Configuration:**
+- `BATCH_SEARCH_CONCURRENT_LIMIT` - Max concurrent Spotify API search requests (default: 50)
+  - Lower values (10-25): More stable, prevents rate limiting, slower for large batches
+  - Higher values (50-75): Faster processing, more aggressive, higher risk of rate limits
+  - Recommended: 50 for most use cases
 
 **AI Configuration (Phase 14):**
 - `AI_PROVIDER` - Primary AI provider (openrouter, groq, or openai)
